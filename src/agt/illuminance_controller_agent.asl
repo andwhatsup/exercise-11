@@ -17,6 +17,9 @@ real_lab_environment("https://raw.githubusercontent.com/Interactions-HSG/example
 // level of Rank 3. Modify the belief so that the agent can learn to handle different goals.
 task_requirements([2,3]).
 
+// toggle this to switch
+use_real_lab(true).
+
 /* Initial goals */
 !start. // the agent has the goal to start
 
@@ -29,19 +32,21 @@ task_requirements([2,3]).
  * Body: (currently) creates a QLearnerArtifact and a ThingArtifact for learning and acting on the lab environment.
 */
 @start
-+!start : learning_lab_environment(Url) & real_lab_environment(RealLab)
-  & task_requirements([Z1Level, Z2Level]) <-
-
++!start : learning_lab_environment(Sim) & real_lab_environment(Real) & use_real_lab(Use) & task_requirements([Z1,Z2]) <-
   .print("Hello world");
+  // pick which TD to use
+  if (Use) { URL = Real } else { URL = Sim };
+  .print("Using WoT TD at ", URL);
 
-
-  // creates a QLearner artifact for learning the lab Thing described by the W3C WoT TD located at URL
-  makeArtifact("qlearner", "tools.QLearner", [Url], QLArtId);
-
-  calculateQ([Z1Level, Z2Level], 100, 0.5, 0.8, 0.4, 15);
-
-  // creates a ThingArtifact artifact for reading and acting on the state of the lab Thing
-  makeArtifact("lab", "org.hyperagents.jacamo.artifacts.wot.ThingArtifact", [Url], LabArtId);
+  // First create the lab artifact since we need it for state observation
+  makeArtifact("lab", "org.hyperagents.jacamo.artifacts.wot.ThingArtifact", [URL], LabArtId);
+  
+  // Then create the qlearner with the same URL
+  makeArtifact("qlearner", "tools.QLearner", [URL], QLArtId);
+  
+  // Initialize Q-learning parameters
+  calculateQ([Z1,Z2], 100, 0.5, 0.8, 0.4, 15);
+  
   !achieve_goal.
 
 
@@ -61,8 +66,7 @@ task_requirements([2,3]).
   .print("Environment status - Tags: ", CurrentTags, ", State: ", CurrentState);
 
   // 3. Determine next action using Q-Learning algorithm
-  getActionFromState([Z1Level,Z2Level], CurrentTags, CurrentState,
-                               NextTag, NextPayloadTags, NextPayload);
+  getActionFromState([Z1Level,Z2Level], CurrentTags, CurrentState,NextTag, NextPayloadTags, NextPayload);
   .print("Selected action - Type: ", NextTag, ", Tags: ", NextPayloadTags, ", Value: ", NextPayload);
   
   // 4. Execute the chosen action in the environment
@@ -78,7 +82,7 @@ task_requirements([2,3]).
 
   // 7. Either terminate or continue with retry limit
   if (Reached == true) {
-    .print("=== Success ===");
+    .print("---- Success ----");
     .print("Target illuminance levels achieved: [", Z1Level, ",", Z2Level, "]");
     .print("Learning process completed");
   } else {
@@ -87,6 +91,6 @@ task_requirements([2,3]).
   }.
 
 +!achieve_goal : retry_count(Count) & Count >= 10 <-
-  .print("=== Failed ===");
+  .print("---- Failed ----");
   .print("Maximum retries reached without achieving goal");
   .print("Learning process terminated").
