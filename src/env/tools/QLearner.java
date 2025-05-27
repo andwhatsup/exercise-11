@@ -1,5 +1,9 @@
 package tools;
 
+import java.io.FileWriter;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -363,4 +367,48 @@ private int discretizeSunshine(double v) {
       lab.performAction(valid.get(rand.nextInt(valid.size())));
     }
   }
+
+  @OPERATION
+  public void exportQTable(Object[] goalDescription) {
+    int key = Arrays.hashCode(goalDescription);
+    double[][] Q = qTables.get(key);
+    
+    if (Q == null) {
+        LOGGER.warning("No Q-table found for goal " + Arrays.toString(goalDescription));
+        return;
+    }
+
+    try {
+        // Create filename with timestamp
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = String.format("qtable_goal_%d_%d_%s.csv", 
+            Integer.parseInt(goalDescription[0].toString()),
+            Integer.parseInt(goalDescription[1].toString()),
+            timestamp);
+            
+        String filepath = Paths.get(System.getProperty("user.dir"), filename).toString();
+        
+        try (FileWriter writer = new FileWriter(filepath)) {
+            // Write header
+            writer.write("State");
+            for (int i = 0; i < actionCount; i++) {
+                writer.write(",Action" + i);
+            }
+            writer.write("\n");
+            
+            // Write Q-table data
+            for (int i = 0; i < Q.length; i++) {
+                writer.write(String.valueOf(i));
+                for (int j = 0; j < Q[i].length; j++) {
+                    writer.write(String.format(",%.4f", Q[i][j]));
+                }
+                writer.write("\n");
+            }
+        }
+        
+        LOGGER.info("Q-table exported to " + filepath);
+    } catch (IOException e) {
+        LOGGER.severe("Failed to export Q-table: " + e.getMessage());
+    }
+}
 }
