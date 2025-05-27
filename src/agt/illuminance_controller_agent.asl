@@ -18,7 +18,7 @@ real_lab_environment("https://raw.githubusercontent.com/Interactions-HSG/example
 task_requirements([2,3]).
 
 // toggle this to switch
-use_real_lab(true).
+use_real_lab(false).
 
 /* Initial goals */
 !start. // the agent has the goal to start
@@ -55,7 +55,8 @@ use_real_lab(true).
 +!achieve_goal : task_requirements([Z1Level, Z2Level]) & not retry_count(_) <-
   +retry_count(0);
   !achieve_goal.
-
+  
+  // Count is set to 10 to limit the number of retries
 +!achieve_goal : task_requirements([Z1Level, Z2Level]) & retry_count(Count) & Count < 10 <-
   // 1. Print the target illuminance levels for both workstations
   .print("Trial ", Count + 1, " of 10");
@@ -85,6 +86,7 @@ use_real_lab(true).
     .print("---- Success ----");
     .print("Target illuminance levels achieved: [", Z1Level, ",", Z2Level, "]");
     .print("Learning process completed");
+    exportQTable([Z1Level, Z2Level]);  // Add this line
   } else {
     -+retry_count(Count + 1);
     !achieve_goal;
